@@ -1,0 +1,14 @@
+{
+  "name": "nos-mudamos",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "db:migrate:local": "wrangler d1 migrations apply nos-mudamos --local",
+    "db:migrate:remote": "wrangler d1 migrations apply nos-mudamos --remote",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.156.0"
+  }
+}
