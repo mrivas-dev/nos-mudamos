@@ -52,9 +52,14 @@ input, select, textarea {
 .list { list-style: none; margin: 0 auto; padding: 0 1rem; display: grid; gap: .75rem; max-width: 60rem; }
 @media (min-width: 720px) { .list { grid-template-columns: repeat(2, 1fr); } }
 .card {
-  background: var(--card); border: 1px solid var(--border); border-radius: .9rem; padding: 1rem;
-  cursor: pointer; display: flex; flex-direction: column; gap: .3rem;
+  background: var(--card); border: 1px solid var(--border); border-radius: .9rem; overflow: hidden;
+  cursor: pointer; display: flex; flex-direction: column;
 }
+.card-body { padding: 1rem; display: flex; flex-direction: column; gap: .3rem; }
+.card .photo { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; background: var(--border); }
+.card .perks { font-size: .9rem; }
+.card .visit { font-size: .9rem; color: var(--accent); font-weight: 600; }
+.card .visit:empty, .card .where:empty, .card .facts:empty, .card .price:empty { display: none; }
 .card h3 { margin: .2rem 0 0; font-size: 1.05rem; }
 .card p { margin: 0; }
 .card .where, .card .facts { color: var(--muted); font-size: .9rem; }
@@ -87,3 +92,9 @@ dialog form { display: flex; flex-direction: column; gap: .8rem; }
 .devices li { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
 .devices div { display: flex; flex-direction: column; }
 .devices small { color: var(--muted); }
+
+dialog h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); margin: .6rem 0 0; }
+.inline { display: flex; gap: .5rem; }
+.inline input { flex: 1; min-width: 0; }
+.hint { margin: -.4rem 0 0; font-size: .85rem; color: var(--muted); }
+.hint:empty { display: none; }

@@ -49,31 +49,62 @@
   <dialog id="apt-dialog">
     <form id="apt-form" method="dialog">
       <h2 id="apt-title">Departamento</h2>
-      <label>Link de la publicación <input name="url" type="url" inputmode="url"></label>
+      <label>Link de la publicación
+        <span class="inline">
+          <input name="url" type="url" inputmode="url" placeholder="Pegá el link de Zonaprop, Argenprop o ML">
+          <button type="button" class="secondary small" id="autofill">Completar</button>
+        </span>
+      </label>
+      <p class="hint" id="autofill-msg"></p>
       <label>Título <input name="title" required maxlength="200"></label>
       <div class="row">
         <label>Barrio <input name="barrio"></label>
         <label>Dirección <input name="address"></label>
       </div>
+      <label>Foto (link) <input name="photo_url" type="url" inputmode="url"></label>
+
+      <h3>Plata</h3>
+      <div class="row">
+        <label>Alquiler <input name="price" type="number" inputmode="numeric" min="0"></label>
+        <label>Moneda <select name="currency"><option>ARS</option><option>USD</option></select></label>
+      </div>
+      <label>Expensas ($) <input name="expensas" type="number" inputmode="numeric" min="0"></label>
+
+      <h3>Ambientes</h3>
       <div class="row">
         <label>Ambientes <input name="ambientes" type="number" inputmode="numeric" min="1"></label>
-        <label>m² <input name="m2" type="number" inputmode="numeric" min="1"></label>
+        <label>Dormitorios <input name="dormitorios" type="number" inputmode="numeric" min="0"></label>
+        <label>Baños <input name="banos" type="number" inputmode="numeric" min="0"></label>
       </div>
       <div class="row">
-        <label>Precio <input name="price" type="number" inputmode="numeric" min="0"></label>
-        <label>Moneda
-          <select name="currency"><option>ARS</option><option>USD</option></select>
-        </label>
+        <label>m² cubiertos <input name="m2_cubiertos" type="number" inputmode="numeric" min="1"></label>
+        <label>m² totales <input name="m2_totales" type="number" inputmode="numeric" min="1"></label>
       </div>
-      <label>Expensas <input name="expensas" type="number" inputmode="numeric" min="0"></label>
-      <div class="row checks">
-        <label class="check"><input name="pileta" type="checkbox"> Pileta</label>
+      <div class="row">
+        <label>Piso <input name="piso" placeholder="Ej: 8° / PB"></label>
+        <label>Antigüedad (años) <input name="antiguedad" type="number" inputmode="numeric" min="0"></label>
+      </div>
+
+      <h3>Lo que nos importa</h3>
+      <div class="row">
+        <label>Pileta
+          <select name="pileta"><option value="">No sé</option><option value="1">Sí</option><option value="0">No</option></select>
+        </label>
         <label>Mascotas
-          <select name="mascotas">
-            <option value="">No sé</option><option value="1">Sí</option><option value="0">No</option>
-          </select>
+          <select name="mascotas"><option value="">No sé</option><option value="1">Sí</option><option value="0">No</option></select>
         </label>
       </div>
+      <div class="row">
+        <label>Cochera
+          <select name="cochera"><option value="">No sé</option><option value="1">Sí</option><option value="0">No</option></select>
+        </label>
+        <label>Balcón / terraza
+          <select name="balcon"><option value="">No sé</option><option value="1">Sí</option><option value="0">No</option></select>
+        </label>
+      </div>
+      <label>Amenities <input name="amenities" placeholder="gimnasio, SUM, seguridad..."></label>
+
+      <h3>Nuestro</h3>
       <div class="row">
         <label>Estado <select name="status" id="status-select"></select></label>
         <label>Puntaje
@@ -83,6 +114,11 @@
             <option value="4">★★★★</option><option value="5">★★★★★</option>
           </select>
         </label>
+      </div>
+      <label>Visita <input name="visit_date" type="datetime-local"></label>
+      <div class="row">
+        <label>Inmobiliaria <input name="agency"></label>
+        <label>Contacto <input name="contact" placeholder="Tel. o mail"></label>
       </div>
       <label>Notas <textarea name="notes" rows="3"></textarea></label>
       <p class="error" id="apt-error" role="alert"></p>

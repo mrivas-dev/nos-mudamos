@@ -104,44 +104,71 @@ function render() {
 function card(a) {
   const li = document.createElement('li');
   li.className = `card status-${a.status}`;
+  const yes = (v, label) => (v === 1 ? label : null);
   const facts = [
     a.ambientes && `${a.ambientes} amb.`,
-    a.m2 && `${a.m2} m²`,
-    a.pileta ? '🏊 Pileta' : null,
-    a.mascotas === 1 ? '🐾 Mascotas' : a.mascotas === 0 ? '🚫🐾' : null,
+    a.dormitorios != null && `${a.dormitorios} dorm.`,
+    a.banos != null && `${a.banos} baño${a.banos === 1 ? '' : 's'}`,
+    (a.m2_cubiertos || a.m2_totales) && `${a.m2_cubiertos || a.m2_totales} m²`,
+    a.piso && `Piso ${a.piso}`,
+  ].filter(Boolean);
+  const perks = [
+    a.pileta === 1 ? '🏊 Pileta' : a.pileta === 0 ? '❌ Sin pileta' : '❓ Pileta',
+    a.mascotas === 1 ? '🐾 Mascotas' : a.mascotas === 0 ? '🚫 Mascotas' : null,
+    yes(a.cochera, '🚗 Cochera'),
+    yes(a.balcon, '🌿 Balcón'),
   ].filter(Boolean);
   li.innerHTML = `
-    <div class="card-head">
-      <span class="badge">${STATUSES[a.status] || a.status}</span>
-      ${a.rating ? `<span class="stars">${'★'.repeat(a.rating)}</span>` : ''}
+    ${a.photo_url ? '<img class="photo" alt="" loading="lazy">' : ''}
+    <div class="card-body">
+      <div class="card-head">
+        <span class="badge">${STATUSES[a.status] || a.status}</span>
+        ${a.rating ? `<span class="stars">${'★'.repeat(a.rating)}</span>` : ''}
+      </div>
+      <h3></h3>
+      <p class="where"></p>
+      <p class="price"></p>
+      <p class="facts"></p>
+      <p class="perks"></p>
+      <p class="visit"></p>
+      ${a.notes ? '<p class="notes"></p>' : ''}
+      ${a.url ? '<a class="link" target="_blank" rel="noopener"></a>' : ''}
     </div>
-    <h3></h3>
-    <p class="where"></p>
-    <p class="price"></p>
-    <p class="facts"></p>
-    ${a.notes ? '<p class="notes"></p>' : ''}
-    ${a.url ? '<a class="link" target="_blank" rel="noopener">Ver publicación ↗</a>' : ''}
   `;
+  if (a.photo_url) li.querySelector('.photo').src = safeUrl(a.photo_url);
   li.querySelector('h3').textContent = a.title;
   li.querySelector('.where').textContent = [a.barrio, a.address].filter(Boolean).join(' · ');
   li.querySelector('.price').textContent = priceText(a);
   li.querySelector('.facts').textContent = facts.join(' · ');
+  li.querySelector('.perks').textContent = perks.join('  ');
+  li.querySelector('.visit').textContent = a.visit_date ? `📅 Visita: ${formatDate(a.visit_date)}` : '';
   if (a.notes) li.querySelector('.notes').textContent = a.notes;
   if (a.url) {
     const link = li.querySelector('.link');
     link.href = safeUrl(a.url);
+    link.textContent = `Ver en ${SOURCE_NAMES[a.source] || 'la publicación'} ↗`;
     link.onclick = (e) => e.stopPropagation();
   }
   li.onclick = () => openForm(a);
   return li;
 }
 
+const SOURCE_NAMES = { zonaprop: 'Zonaprop', argenprop: 'Argenprop', mercadolibre: 'MercadoLibre' };
+
+function formatDate(v) {
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return v;
+  return d.toLocaleString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
 function priceText(a) {
   const fmt = (n) => n.toLocaleString('es-AR');
-  const parts = [];
-  if (a.price != null) parts.push(`${a.currency === 'USD' ? 'US$' : '$'} ${fmt(a.price)}`);
-  if (a.expensas != null) parts.push(`+ $ ${fmt(a.expensas)} exp.`);
-  return parts.join(' ');
+  if (a.price == null) return a.expensas != null ? `Expensas $ ${fmt(a.expensas)}` : '';
+  if (a.currency === 'USD') {
+    return `US$ ${fmt(a.price)}${a.expensas != null ? ` + $ ${fmt(a.expensas)} exp.` : ''}`;
+  }
+  if (a.expensas == null) return `$ ${fmt(a.price)}`;
+  return `$ ${fmt(a.price + a.expensas)} por mes ($ ${fmt(a.price)} + ${fmt(a.expensas)} exp.)`;
 }
 
 function safeUrl(url) {
@@ -164,6 +191,7 @@ function openForm(a = null) {
   const form = $('#apt-form');
   form.reset();
   $('#apt-error').textContent = '';
+  $('#autofill-msg').textContent = '';
   $('#apt-title').textContent = a ? 'Editar departamento' : 'Nuevo departamento';
   $('#apt-delete').hidden = !a;
   if (a) {
@@ -177,6 +205,28 @@ function openForm(a = null) {
 }
 
 $('#add').onclick = () => openForm();
+
+$('#autofill').onclick = async () => {
+  const form = $('#apt-form');
+  const link = form.elements.url.value.trim();
+  const msg = $('#autofill-msg');
+  if (!link) { msg.textContent = 'Pegá primero el link.'; return; }
+  msg.textContent = 'Buscando datos…';
+  try {
+    const { preview } = await api(`/api/preview?url=${encodeURIComponent(link)}`);
+    if (preview.error) { msg.textContent = `${preview.error}. Completalo a mano.`; return; }
+    let filled = 0;
+    for (const [k, v] of Object.entries(preview)) {
+      const el = form.elements[k];
+      if (!el || el.name === 'url' || (el.tagName !== 'SELECT' && el.value)) continue; // no pisa lo que ya escribieron
+      el.value = v;
+      filled++;
+    }
+    msg.textContent = filled ? `Listo, completé ${filled} datos. Revisalos antes de guardar.` : 'No encontré datos nuevos en la publicación.';
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+};
 $('#apt-cancel').onclick = () => $('#apt-dialog').close();
 
 $('#apt-form').addEventListener('submit', async (e) => {

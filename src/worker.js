@@ -1,12 +1,17 @@
+import { previewListing, sourceFromUrl } from './preview.js';
+
 // API de "Nos mudamos": acceso por dispositivo + lista de departamentos.
 
 const COOKIE = 'nm_device';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 400; // ~13 meses, el máximo que aceptan los navegadores
 
 const APARTMENT_FIELDS = {
-  url: 'text', source: 'text', title: 'text', address: 'text', barrio: 'text',
-  ambientes: 'int', m2: 'int', price: 'int', currency: 'text', expensas: 'int',
-  pileta: 'bool', mascotas: 'bool', status: 'text', rating: 'int', notes: 'text',
+  url: 'text', source: 'text', title: 'text', barrio: 'text', address: 'text', photo_url: 'text',
+  price: 'int', currency: 'text', expensas: 'int',
+  ambientes: 'int', dormitorios: 'int', banos: 'int', m2_cubiertos: 'int', m2_totales: 'int',
+  piso: 'text', antiguedad: 'int',
+  pileta: 'bool', mascotas: 'bool', cochera: 'bool', balcon: 'bool', amenities: 'text',
+  status: 'text', rating: 'int', notes: 'text', visit_date: 'text', agency: 'text', contact: 'text',
 };
 const STATUSES = ['nuevo', 'contactado', 'visita', 'favorito', 'descartado'];
 
@@ -49,6 +54,10 @@ async function handleApi(request, env, url) {
   if (m && method === 'DELETE') {
     await env.DB.prepare('DELETE FROM devices WHERE id = ?').bind(Number(m[1])).run();
     return json({ ok: true });
+  }
+
+  if (path === '/api/preview' && method === 'GET') {
+    return json({ preview: await previewListing(url.searchParams.get('url')) });
   }
 
   if (path === '/api/apartments' && method === 'GET') {
@@ -176,7 +185,7 @@ function cleanApartment(input, isNew) {
   if (out.status != null && !STATUSES.includes(out.status)) {
     throw new HttpError(400, 'Estado inválido');
   }
-  if (out.pileta === null) out.pileta = 0;
+  if (out.url && !out.source) out.source = sourceFromUrl(out.url);
   if (isNew && !out.title) throw new HttpError(400, 'Falta el título');
   if (!isNew && 'title' in out && !out.title) throw new HttpError(400, 'Falta el título');
   return out;
