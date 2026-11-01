@@ -4,7 +4,7 @@ Web simple y mobile-first para llevar la lista de departamentos que estamos vien
 
 - **Acceso por dispositivo:** la primera vez cada celular o notebook ingresa un código compartido y queda recordado (cookie de ~13 meses). Desde ⚙️ se ven los dispositivos autorizados y se puede quitar uno.
 - **Lista:** agregar, editar, puntuar y cambiar el estado de cada departamento (nuevo, contactado, visita, favorito, descartado). Al pegar un link de Zonaprop, Argenprop o MercadoLibre se intenta completar los datos solo.
-- **Próximamente:** sugerencias automáticas desde Zonaprop, Argenprop y MercadoLibre.
+- **Sugeridos:** dos veces por día se buscan departamentos en Zonaprop, Argenprop y MercadoLibre según los criterios guardados (editables desde la web). Se pueden agregar a la lista o descartar con un toque.
 
 ## Stack
 

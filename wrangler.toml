@@ -12,3 +12,7 @@ binding = "DB"
 database_name = "nos-mudamos"
 # Se completa al crear la base con `npx wrangler d1 create nos-mudamos`
 database_id = "REEMPLAZAR"
+
+# Búsqueda de sugerencias: todos los días a las 9 y a las 19 (hora de Argentina)
+[triggers]
+crons = ["0 12 * * *", "0 22 * * *"]

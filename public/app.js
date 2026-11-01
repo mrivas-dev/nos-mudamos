@@ -75,7 +75,102 @@ async function load() {
   const data = await api('/api/apartments');
   apartments = data.apartments;
   render();
+  loadSuggestions();
 }
+
+// --- Sugeridos ---
+
+let criteria = null;
+
+function showView(name) {
+  $('#view-list').hidden = name !== 'list';
+  $('#view-sug').hidden = name !== 'sug';
+  $('#add').hidden = name !== 'list';
+  $('#tab-list').classList.toggle('active', name === 'list');
+  $('#tab-sug').classList.toggle('active', name === 'sug');
+}
+$('#tab-list').onclick = () => showView('list');
+$('#tab-sug').onclick = () => showView('sug');
+
+async function loadSuggestions() {
+  const [{ suggestions, lastRun }, c] = await Promise.all([api('/api/suggestions'), api('/api/criteria')]);
+  criteria = c.criteria;
+  $('#sug-count').textContent = suggestions.length ? `(${suggestions.length})` : '';
+  $('#sug-empty').hidden = suggestions.length > 0;
+  $('#sug-list').replaceChildren(...suggestions.map((sug) => card(sug, true)));
+  $('#criteria-text').textContent = criteriaText(criteria);
+  $('#last-run').textContent = lastRun ? lastRunText(lastRun) : 'Todavía no se corrió ninguna búsqueda.';
+}
+
+function criteriaText(c) {
+  const parts = [
+    `${c.ambientes} ambientes en alquiler`,
+    `en ${c.barrios.map((b) => b.replace(/(^|\s)\S/g, (x) => x.toUpperCase())).join(', ')}`,
+    c.maxPrice ? `hasta ${c.currency === 'USD' ? 'US$' : '$'} ${c.maxPrice.toLocaleString('es-AR')}` : 'sin tope de precio',
+    c.requirePileta ? 'con pileta' : null,
+    c.preferMascotas ? 'mascotas primero' : null,
+  ].filter(Boolean);
+  return `Buscamos ${parts.join(', ')}.`;
+}
+
+function lastRunText(run) {
+  const when = formatDate(run.at);
+  const bits = Object.entries(run.summary).map(([site, r]) =>
+    r.error ? `${SOURCE_NAMES[site]}: error` : `${SOURCE_NAMES[site]}: ${r.added} nuevas${r.errors?.length ? ' (con problemas)' : ''}`,
+  );
+  return `Última búsqueda: ${when} · ${bits.join(' · ')}`;
+}
+
+async function actOnSuggestion(sug, action) {
+  await api(`/api/suggestions/${sug.id}/${action}`, { method: 'POST' });
+  await load();
+}
+
+$('#run-search').onclick = async () => {
+  const btn = $('#run-search');
+  btn.disabled = true;
+  btn.textContent = 'Buscando…';
+  try {
+    await api('/api/suggestions/run', { method: 'POST' });
+    await loadSuggestions();
+  } catch (err) {
+    $('#last-run').textContent = err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Buscar ahora';
+  }
+};
+
+$('#edit-criteria').onclick = () => {
+  const f = $('#criteria-form');
+  f.elements.barrios.value = criteria.barrios.join(', ');
+  f.elements.ambientes.value = criteria.ambientes;
+  f.elements.maxPrice.value = criteria.maxPrice ?? '';
+  f.elements.currency.value = criteria.currency;
+  f.elements.requirePileta.checked = criteria.requirePileta;
+  f.elements.preferMascotas.checked = criteria.preferMascotas;
+  for (const el of f.querySelectorAll('[name=sources]')) el.checked = criteria.sources.includes(el.value);
+  $('#criteria-dialog').showModal();
+};
+$('#criteria-cancel').onclick = () => $('#criteria-dialog').close();
+$('#criteria-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  await api('/api/criteria', {
+    method: 'PUT',
+    body: {
+      barrios: f.elements.barrios.value.split(','),
+      ambientes: f.elements.ambientes.value,
+      maxPrice: f.elements.maxPrice.value,
+      currency: f.elements.currency.value,
+      requirePileta: f.elements.requirePileta.checked,
+      preferMascotas: f.elements.preferMascotas.checked,
+      sources: [...f.querySelectorAll('[name=sources]:checked')].map((el) => el.value),
+    },
+  });
+  $('#criteria-dialog').close();
+  await loadSuggestions();
+});
 
 function render() {
   const counts = { activos: 0, todos: apartments.length };
@@ -101,7 +196,7 @@ function render() {
   $('#list').replaceChildren(...visible.map(card));
 }
 
-function card(a) {
+function card(a, suggestion = false) {
   const li = document.createElement('li');
   li.className = `card status-${a.status}`;
   const yes = (v, label) => (v === 1 ? label : null);
@@ -122,7 +217,7 @@ function card(a) {
     ${a.photo_url ? '<img class="photo" alt="" loading="lazy">' : ''}
     <div class="card-body">
       <div class="card-head">
-        <span class="badge">${STATUSES[a.status] || a.status}</span>
+        <span class="badge">${suggestion ? SOURCE_NAMES[a.source] || a.source : STATUSES[a.status] || a.status}</span>
         ${a.rating ? `<span class="stars">${'★'.repeat(a.rating)}</span>` : ''}
       </div>
       <h3></h3>
@@ -149,7 +244,24 @@ function card(a) {
     link.textContent = `Ver en ${SOURCE_NAMES[a.source] || 'la publicación'} ↗`;
     link.onclick = (e) => e.stopPropagation();
   }
-  li.onclick = () => openForm(a);
+  if (suggestion) {
+    const actions = document.createElement('div');
+    actions.className = 'card-actions';
+    const dismiss = document.createElement('button');
+    dismiss.className = 'secondary small';
+    dismiss.textContent = 'Descartar';
+    dismiss.onclick = (e) => { e.stopPropagation(); actOnSuggestion(a, 'dismiss'); };
+    const accept = document.createElement('button');
+    accept.className = 'small';
+    accept.textContent = 'Agregar a la lista';
+    accept.onclick = (e) => { e.stopPropagation(); actOnSuggestion(a, 'accept'); };
+    actions.append(dismiss, accept);
+    li.querySelector('.card-body').append(actions);
+    li.classList.remove(`status-${a.status}`);
+    li.onclick = () => a.url && window.open(safeUrl(a.url), '_blank', 'noopener');
+  } else {
+    li.onclick = () => openForm(a);
+  }
   return li;
 }
 
