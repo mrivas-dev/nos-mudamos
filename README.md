@@ -21,10 +21,10 @@ npm run dev                      # http://localhost:8787
 
 ## Publicar
 
-```sh
-npx wrangler login
-npx wrangler d1 create nos-mudamos   # copiar el database_id a wrangler.toml
-npm run db:migrate:remote
-npx wrangler secret put ACCESS_CODE
-npm run deploy
-```
+Se publica solo con GitHub Actions en cada push a `main` (`.github/workflows/deploy.yml`). Necesita estos secrets en el repo (Settings → Secrets and variables → Actions):
+
+- `CLOUDFLARE_API_TOKEN`: token de Cloudflare con la plantilla "Edit Cloudflare Workers" más permiso de edición de D1.
+- `CLOUDFLARE_ACCOUNT_ID`: el id de la cuenta de Cloudflare.
+- `ACCESS_CODE`: el código para autorizar dispositivos.
+
+La primera vez el workflow crea la base D1. La web queda en `https://nos-mudamos.<subdominio>.workers.dev`.
