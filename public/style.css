@@ -98,3 +98,14 @@ dialog h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; 
 .inline input { flex: 1; min-width: 0; }
 .hint { margin: -.4rem 0 0; font-size: .85rem; color: var(--muted); }
 .hint:empty { display: none; }
+
+.tabs { display: flex; gap: .25rem; margin: 0 1rem .75rem; background: var(--card); border: 1px solid var(--border); border-radius: .7rem; padding: .25rem; }
+.tabs button { flex: 1; background: transparent; color: var(--text); min-height: 40px; padding: .4rem; }
+.tabs button.active { background: var(--accent); color: #fff; }
+.sug-bar { margin: 0 1rem .75rem; display: flex; flex-direction: column; gap: .5rem; }
+.sug-bar p { margin: 0; }
+.sug-actions { display: flex; gap: .5rem; }
+.card .card-actions { display: flex; gap: .5rem; margin-top: .5rem; }
+.card .card-actions button { flex: 1; }
+fieldset { border: 1px solid var(--border); border-radius: .5rem; display: flex; flex-direction: column; gap: .5rem; }
+legend { color: var(--muted); font-size: .85rem; }

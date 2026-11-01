@@ -35,12 +35,29 @@
       <button class="icon" id="open-devices" aria-label="Dispositivos">⚙️</button>
     </header>
 
-    <nav class="filters" id="filters" aria-label="Filtrar por estado"></nav>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-list" class="active">Nuestra lista</button>
+      <button role="tab" id="tab-sug">Sugeridos <span id="sug-count"></span></button>
+    </div>
 
-    <main>
+    <section id="view-list">
+      <nav class="filters" id="filters" aria-label="Filtrar por estado"></nav>
       <ul class="list" id="list"></ul>
       <p class="empty" id="empty" hidden>Todavía no hay departamentos. Agregá el primero con el botón +.</p>
-    </main>
+    </section>
+
+    <section id="view-sug" hidden>
+      <div class="sug-bar">
+        <p id="criteria-text"></p>
+        <div class="sug-actions">
+          <button class="secondary small" id="edit-criteria">Cambiar criterios</button>
+          <button class="small" id="run-search">Buscar ahora</button>
+        </div>
+        <p class="hint" id="last-run"></p>
+      </div>
+      <ul class="list" id="sug-list"></ul>
+      <p class="empty" id="sug-empty" hidden>No hay sugerencias nuevas. La búsqueda corre sola dos veces por día.</p>
+    </section>
 
     <button class="fab" id="add" aria-label="Agregar departamento">+</button>
   </div>
@@ -127,6 +144,32 @@
         <span class="spacer"></span>
         <button type="button" class="secondary" id="apt-cancel">Cancelar</button>
         <button type="submit" id="apt-save">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Criterios de búsqueda -->
+  <dialog id="criteria-dialog">
+    <form id="criteria-form" method="dialog">
+      <h2>Qué buscamos</h2>
+      <label>Barrios (separados por coma) <input name="barrios" placeholder="Palermo, Colegiales"></label>
+      <div class="row">
+        <label>Ambientes <input name="ambientes" type="number" inputmode="numeric" min="1" max="9"></label>
+        <label>Precio máximo <input name="maxPrice" type="number" inputmode="numeric" min="0" placeholder="Sin tope"></label>
+        <label>Moneda <select name="currency"><option>ARS</option><option>USD</option></select></label>
+      </div>
+      <label class="check"><input name="requirePileta" type="checkbox"> Tiene que tener pileta</label>
+      <label class="check"><input name="preferMascotas" type="checkbox"> Primero las que aceptan mascotas</label>
+      <fieldset>
+        <legend>Sitios</legend>
+        <label class="check"><input name="sources" value="zonaprop" type="checkbox"> Zonaprop</label>
+        <label class="check"><input name="sources" value="argenprop" type="checkbox"> Argenprop</label>
+        <label class="check"><input name="sources" value="mercadolibre" type="checkbox"> MercadoLibre</label>
+      </fieldset>
+      <div class="actions">
+        <span class="spacer"></span>
+        <button type="button" class="secondary" id="criteria-cancel">Cancelar</button>
+        <button type="submit">Guardar</button>
       </div>
     </form>
   </dialog>

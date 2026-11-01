@@ -1,4 +1,5 @@
 import { previewListing, sourceFromUrl } from './preview.js';
+import { getCriteria, saveCriteria, runSearch } from './suggestions.js';
 
 // API de "Nos mudamos": acceso por dispositivo + lista de departamentos.
 
@@ -26,6 +27,10 @@ export default {
       console.error(err);
       return json({ error: 'Error interno' }, 500);
     }
+  },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runSearch(env));
   },
 };
 
@@ -58,6 +63,40 @@ async function handleApi(request, env, url) {
 
   if (path === '/api/preview' && method === 'GET') {
     return json({ preview: await previewListing(url.searchParams.get('url')) });
+  }
+
+  if (path === '/api/criteria' && method === 'GET') return json({ criteria: await getCriteria(env) });
+  if (path === '/api/criteria' && method === 'PUT') {
+    return json({ criteria: await saveCriteria(env, await readJson(request)) });
+  }
+
+  if (path === '/api/suggestions' && method === 'GET') {
+    const { results } = await env.DB
+      .prepare("SELECT * FROM suggestions WHERE status = 'nueva' ORDER BY mascotas = 1 DESC, found_at DESC")
+      .all();
+    const last = await env.DB.prepare("SELECT value FROM settings WHERE key = 'last_run'").first();
+    return json({ suggestions: results, lastRun: last ? JSON.parse(last.value) : null });
+  }
+  if (path === '/api/suggestions/run' && method === 'POST') {
+    return json({ summary: await runSearch(env) });
+  }
+  m = path.match(/^\/api\/suggestions\/(\d+)\/(accept|dismiss)$/);
+  if (m && method === 'POST') {
+    const s = await env.DB.prepare('SELECT * FROM suggestions WHERE id = ?').bind(Number(m[1])).first();
+    if (!s) throw new HttpError(404, 'No existe');
+    if (m[2] === 'dismiss') {
+      await env.DB.prepare("UPDATE suggestions SET status = 'descartada' WHERE id = ?").bind(s.id).run();
+      return json({ ok: true });
+    }
+    const data = cleanApartment({ ...s, status: 'nuevo', title: s.title || 'Sin título' }, true);
+    const cols = Object.keys(data);
+    const row = await env.DB
+      .prepare(`INSERT INTO apartments (${cols.join(', ')}, created_by)
+                VALUES (${cols.map(() => '?').join(', ')}, ?) RETURNING *`)
+      .bind(...cols.map((c) => data[c]), device.id)
+      .first();
+    await env.DB.prepare("UPDATE suggestions SET status = 'agregada' WHERE id = ?").bind(s.id).run();
+    return json({ apartment: row }, 201);
   }
 
   if (path === '/api/apartments' && method === 'GET') {
