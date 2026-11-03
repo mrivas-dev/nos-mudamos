@@ -67,10 +67,11 @@ export async function saveCriteria(env, input) {
 // Corre la búsqueda en todos los sitios y guarda lo nuevo. Devuelve un resumen por sitio.
 export async function runSearch(env) {
   const criteria = await getCriteria(env);
+  const rate = await usdRate(env);
   const summary = {};
   for (const source of criteria.sources) {
     try {
-      summary[source] = await searchSite(env, source, criteria);
+      summary[source] = await searchSite(env, source, criteria, rate);
     } catch (err) {
       summary[source] = { error: String(err.message || err) };
     }
@@ -80,7 +81,7 @@ export async function runSearch(env) {
   return summary;
 }
 
-async function searchSite(env, source, criteria) {
+async function searchSite(env, source, criteria, rate) {
   const site = SITES[source];
   const links = new Set();
   const errors = [];
@@ -112,9 +113,7 @@ async function searchSite(env, source, criteria) {
       errors.push(p.error);
       continue;
     }
-    const discard =
-      (criteria.requirePileta && p.pileta === 0) ||
-      (criteria.maxPrice && p.price && (p.currency || 'ARS') === criteria.currency && p.price > criteria.maxPrice);
+    const discard = (criteria.requirePileta && p.pileta === 0) || overBudget(p, criteria, rate);
     // Las descartadas igual se guardan para no volver a abrirlas en la próxima corrida
     await env.DB.prepare(
       `INSERT OR IGNORE INTO suggestions
@@ -138,3 +137,40 @@ const BROWSER_HEADERS = {
   'Accept-Language': 'es-AR,es;q=0.9',
   Accept: 'text/html',
 };
+
+// --- Presupuesto: alquiler + expensas, pasando de moneda con el dólar oficial ---
+
+const RATE_TTL_MS = 12 * 60 * 60 * 1000;
+const FALLBACK_RATE = 1450;
+
+// Pesos por dólar (oficial, venta). Se guarda 12 h para no consultarlo en cada pedido.
+export async function usdRate(env) {
+  const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'usd_rate'").first();
+  const cached = row ? JSON.parse(row.value) : null;
+  if (cached && Date.now() - Date.parse(cached.at) < RATE_TTL_MS) return cached.value;
+  try {
+    const res = await fetch('https://dolarapi.com/v1/dolares/oficial');
+    const venta = Number((await res.json()).venta);
+    if (res.ok && venta > 0) {
+      await env.DB.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('usd_rate', ?)")
+        .bind(JSON.stringify({ value: venta, at: new Date().toISOString() })).run();
+      return venta;
+    }
+  } catch {}
+  return cached?.value || FALLBACK_RATE;
+}
+
+// Total por mes en la moneda pedida. Las expensas siempre están en pesos.
+export function monthlyTotal(item, currency, rate) {
+  if (item.price == null) return null;
+  const toTarget = (amount, from) =>
+    from === currency ? amount : currency === 'USD' ? amount / rate : amount * rate;
+  return toTarget(item.price, item.currency || 'ARS') + toTarget(item.expensas || 0, 'ARS');
+}
+
+// Sin precio publicado no se puede saber, así que no se filtra.
+export function overBudget(item, criteria, rate) {
+  if (!criteria.maxPrice) return false;
+  const total = monthlyTotal(item, criteria.currency, rate);
+  return total != null && total > criteria.maxPrice;
+}
