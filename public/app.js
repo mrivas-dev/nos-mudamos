@@ -93,7 +93,7 @@ $('#tab-list').onclick = () => showView('list');
 $('#tab-sug').onclick = () => showView('sug');
 
 async function loadSuggestions() {
-  const [{ suggestions, lastRun, hidden }, c] = await Promise.all([api('/api/suggestions'), api('/api/criteria')]);
+  const [{ suggestions, lastRun, hidden, duplicates }, c] = await Promise.all([api('/api/suggestions'), api('/api/criteria')]);
   criteria = c.criteria;
   $('#sug-count').textContent = suggestions.length ? `(${suggestions.length})` : '';
   $('#sug-empty').hidden = suggestions.length > 0;
@@ -101,7 +101,8 @@ async function loadSuggestions() {
   $('#criteria-text').textContent = criteriaText(criteria);
   $('#last-run').textContent =
     (lastRun ? lastRunText(lastRun) : 'Todavía no se corrió ninguna búsqueda.') +
-    (hidden ? ` · ${hidden} oculta${hidden === 1 ? '' : 's'} por pasarse del tope` : '');
+    (hidden ? ` · ${hidden} oculta${hidden === 1 ? '' : 's'} por pasarse del tope` : '') +
+    (duplicates ? ` · ${duplicates} repetida${duplicates === 1 ? '' : 's'}` : '');
 }
 
 function criteriaText(c) {

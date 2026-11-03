@@ -1,5 +1,6 @@
 // Búsqueda automática de departamentos nuevos según los criterios guardados.
 import { previewListing } from './preview.js';
+import { listingKey } from './dedupe.js';
 
 export const DEFAULT_CRITERIA = {
   barrios: ['palermo'],
@@ -95,13 +96,17 @@ async function searchSite(env, source, criteria, rate) {
     for (const m of html.matchAll(site.linkPattern)) links.add(new URL(m[1], site.base).href);
   }
 
-  // Saltea las que ya vimos (como sugerencia o ya cargadas a mano)
+  // Saltea los avisos que ya vimos (como sugerencia o cargados a mano), aunque el link cambie
+  const { results: known } = await env.DB
+    .prepare('SELECT url FROM suggestions UNION SELECT url FROM apartments WHERE url IS NOT NULL')
+    .all();
+  const seen = new Set(known.map((r) => listingKey(r.url)));
   const fresh = [];
   for (const link of links) {
-    const seen = await env.DB
-      .prepare('SELECT 1 FROM suggestions WHERE url = ? UNION SELECT 1 FROM apartments WHERE url = ?')
-      .bind(link, link).first();
-    if (!seen) fresh.push(link);
+    const key = listingKey(link);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    fresh.push(link);
     if (fresh.length >= MAX_NEW_PER_SOURCE) break;
   }
 
