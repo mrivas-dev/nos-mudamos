@@ -126,9 +126,22 @@ function lastRunText(run) {
   return `Última búsqueda: ${when} · ${bits.join(' · ')}`;
 }
 
-async function actOnSuggestion(sug, action) {
-  await api(`/api/suggestions/${sug.id}/${action}`, { method: 'POST' });
-  await load();
+async function actOnSuggestion(sug, action, actions) {
+  const buttons = actions.querySelectorAll('button');
+  buttons.forEach((b) => (b.disabled = true));
+  try {
+    await api(`/api/suggestions/${sug.id}/${action}`, { method: 'POST' });
+    await load();
+  } catch (err) {
+    buttons.forEach((b) => (b.disabled = false));
+    let msg = actions.querySelector('.error');
+    if (!msg) {
+      msg = document.createElement('p');
+      msg.className = 'error';
+      actions.after(msg);
+    }
+    msg.textContent = `No se pudo ${action === 'accept' ? 'agregar' : 'descartar'}: ${err.message}`;
+  }
 }
 
 $('#run-search').onclick = async () => {
@@ -255,15 +268,19 @@ function card(a, suggestion = false) {
     const dismiss = document.createElement('button');
     dismiss.className = 'secondary small';
     dismiss.textContent = 'Descartar';
-    dismiss.onclick = (e) => { e.stopPropagation(); actOnSuggestion(a, 'dismiss'); };
+    dismiss.type = 'button';
+    dismiss.onclick = (e) => { e.preventDefault(); e.stopPropagation(); actOnSuggestion(a, 'dismiss', actions); };
     const accept = document.createElement('button');
     accept.className = 'small';
     accept.textContent = 'Agregar a la lista';
-    accept.onclick = (e) => { e.stopPropagation(); actOnSuggestion(a, 'accept'); };
+    accept.type = 'button';
+    accept.onclick = (e) => { e.preventDefault(); e.stopPropagation(); actOnSuggestion(a, 'accept', actions); };
     actions.append(dismiss, accept);
     li.querySelector('.card-body').append(actions);
     li.classList.remove(`status-${a.status}`);
-    li.onclick = () => a.url && window.open(safeUrl(a.url), '_blank', 'noopener');
+    // En sugeridos la tarjeta no es un link: solo "Ver en…" abre el aviso, así un toque
+    // que no cae justo en un botón no saca a nadie de la app
+    li.classList.add('suggestion');
   } else {
     li.onclick = () => openForm(a);
   }

@@ -105,7 +105,9 @@ dialog h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; 
 .sug-bar { margin: 0 1rem .75rem; display: flex; flex-direction: column; gap: .5rem; }
 .sug-bar p { margin: 0; }
 .sug-actions { display: flex; gap: .5rem; }
-.card .card-actions { display: flex; gap: .5rem; margin-top: .5rem; }
+.card .card-actions { display: flex; gap: .5rem; margin-top: 1rem; }
+.card.suggestion { cursor: default; }
+.card .card-actions button:disabled { opacity: .5; }
 .card .card-actions button { flex: 1; }
 fieldset { border: 1px solid var(--border); border-radius: .5rem; display: flex; flex-direction: column; gap: .5rem; }
 legend { color: var(--muted); font-size: .85rem; }
