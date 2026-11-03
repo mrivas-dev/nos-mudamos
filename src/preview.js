@@ -43,10 +43,10 @@ export async function previewListing(raw) {
   } catch {
     return { source, url: url.href, error: 'No se pudo abrir la publicación' };
   }
-  return { source, url: url.href, ...parseListing(html) };
+  return { source, url: url.href, ...parseListing(html, source) };
 }
 
-export function parseListing(html) {
+export function parseListing(html, source) {
   const out = {};
   const meta = (prop) => {
     const re = new RegExp(
@@ -109,9 +109,97 @@ export function parseListing(html) {
     if (m) out.barrio = m[1];
   }
 
+  // Cada sitio tiene una ficha con datos ordenados: esos valen más que lo que se adivina del texto
+  const site = SITE_PARSERS[source];
+  if (site) {
+    const text = pageText(html);
+    for (const [k, v] of Object.entries(site(text, html))) if (v != null && v !== '') out[k] = v;
+  }
+  if (out.title) out.title = out.title.replace(/\s*[|-]\s*(Argenprop|MercadoLibre|Zonaprop).*$/i, '').replace(/\s+-\s+(US\$|\$)\s*[\d.]+$/, '').trim();
+
   for (const k of Object.keys(out)) if (out[k] == null || out[k] === '') delete out[k];
   return out;
 }
+
+function pageText(html) {
+  return decode(html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' '))
+    .replace(/\s+/g, ' ');
+}
+
+const pick = (text, re) => text.match(re)?.[1] ?? null;
+const pickInt = (text, re) => {
+  const v = pick(text, re);
+  return v == null ? null : toInt(v);
+};
+const yesNo = (v) => (v == null ? null : /^s[ií]/i.test(v) ? 1 : /^no/i.test(v) ? 0 : null);
+
+const SITE_PARSERS = {
+  // Ficha "Características ... Código de aviso"
+  argenprop(text) {
+    const a = text.indexOf('Características');
+    const b = text.indexOf('Código de aviso', a);
+    if (a < 0) return {};
+    const t = text.slice(a, b > a ? b : a + 4000);
+    const out = {
+      ambientes: pickInt(t, /Cant\. Ambientes: (\d+)/),
+      dormitorios: pickInt(t, /Cant\. Dormitorios: (\d+)/),
+      banos: pickInt(t, /Cant\. Baños: (\d+)/),
+      antiguedad: pickInt(t, /Antig[üu]edad: (\d+)/i),
+      expensas: pickInt(t, /Expensas: \$ ?([\d.]+)/),
+      m2_cubiertos: pickInt(t, /Sup\. Cubierta: (\d+)/),
+      m2_totales: pickInt(t, /Sup\. Total: (\d+)/),
+    };
+    const cocheras = pickInt(t, /Cant\. Cocheras: (\d+)/);
+    if (cocheras != null) out.cochera = cocheras > 0 ? 1 : 0;
+    const price = t.match(/Precio: (USD|U\$S|\$) ?([\d.]+)/);
+    if (price) {
+      out.price = toInt(price[2]);
+      out.currency = price[1] === '$' ? 'ARS' : 'USD';
+    }
+    // La ficha lista las instalaciones del edificio: si no nombra pileta, no tiene
+    out.pileta = /\bPileta\b/i.test(t) ? 1 : 0;
+    if (/\b(Balc[oó]n|Terraza)\b/i.test(t)) out.balcon = 1;
+    if (/(Permite|Acepta|Apto) mascotas/i.test(t)) out.mascotas = 1;
+    const amen = ['Gimnasio', 'SUM', 'Parrilla', 'Solarium', 'Laundry', 'Vigilancia', 'Sauna', 'Jacuzzi'].filter((x) =>
+      new RegExp(`\\b${x}\\b`).test(t),
+    );
+    if (amen.length) out.amenities = amen.join(', ').toLowerCase();
+    return out;
+  },
+
+  // Ficha "Características del inmueble" con pares "Etiqueta valor"
+  mercadolibre(text, html) {
+    const a = text.indexOf('Características del inmueble');
+    if (a < 0) return {};
+    const t = text.slice(a, a + 6000);
+    const out = {
+      m2_totales: pickInt(t, /Superficie total (\d+)/),
+      m2_cubiertos: pickInt(t, /Superficie cubierta (\d+)/),
+      ambientes: pickInt(t, /\bAmbientes (\d+)/),
+      dormitorios: pickInt(t, /\bDormitorios (\d+)/),
+      banos: pickInt(t, /\bBaños (\d+)/),
+      antiguedad: pickInt(t, /Antigüedad (\d+)/),
+      expensas: pickInt(t, /Expensas ([\d.]+) ARS/),
+      piso: pick(t, /Número de piso de la unidad (\w+)/),
+      mascotas: yesNo(pick(t, /Admite mascotas:? (Sí|No)/)),
+      pileta: yesNo(pick(t, /\bPileta (Sí|No)/)),
+    };
+    const cocheras = pickInt(t, /\bCocheras:? (\d+)/);
+    if (cocheras != null) out.cochera = cocheras > 0 ? 1 : 0;
+    const balcon = yesNo(pick(t, /\bBalcón (Sí|No)/));
+    const terraza = yesNo(pick(t, /\bTerraza (Sí|No)/));
+    if (balcon === 1 || terraza === 1) out.balcon = 1;
+    else if (balcon === 0 && terraza !== 1) out.balcon = 0;
+    const amen = ['Gimnasio', 'Parrilla', 'Solarium', 'Laundry', 'Sauna', 'Jacuzzi', 'Seguridad']
+      .filter((x) => new RegExp(`\\b${x}:? Sí`).test(t));
+    if (/Salón de usos múltiples:? Sí/.test(t)) amen.push('SUM');
+    if (amen.length) out.amenities = amen.join(', ').toLowerCase();
+    // La dirección viene en los datos de la página, en el link a la ubicación
+    const loc = html.match(/"target":"location_and_points"[^{}]*"label":\{"text":"([^"]{3,120})"/);
+    if (loc) out.address = decodeJsonString(loc[1]).replace(/,\s*(Capital Federal|CABA).*$/i, '').trim();
+    return out;
+  },
+};
 
 function fromJsonLd(node, out) {
   if (!node || typeof node !== 'object') return;
@@ -127,7 +215,11 @@ function fromJsonLd(node, out) {
   const addr = node.address;
   if (addr && typeof addr === 'object') {
     if (addr.streetAddress && !out.address) out.address = String(addr.streetAddress);
-    if (addr.addressLocality && !out.barrio) out.barrio = String(addr.addressLocality);
+    // Argenprop pone el barrio en addressRegion y "CABA, Argentina" en addressLocality
+    const barrio = [addr.addressRegion, addr.addressLocality].find((v) => v && !/CABA|Capital|Argentina/i.test(v));
+    if (barrio && !out.barrio) out.barrio = String(barrio);
+    const piso = String(addr.streetAddress || '').match(/Piso (\w+)/i);
+    if (piso && !out.piso) out.piso = piso[1];
   }
   if (typeof node.description === 'string') out._ldDescription = decode(node.description);
   if (node.image && !out.photo_url) out.photo_url = [].concat(node.image)[0]?.url ?? [].concat(node.image)[0];
@@ -148,7 +240,17 @@ function decode(s) {
     .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;|&#039;/g, "'")
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
     .replace(/&#(\d+);/g, (_, c) => String.fromCharCode(Number(c)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, c) => String.fromCharCode(parseInt(c, 16)))
+    .replace(/&plus;/g, '+')
     .replace(/&([a-z])acute;/gi, (_, c) => ({ a: 'á', e: 'é', i: 'í', o: 'ó', u: 'ú' })[c.toLowerCase()] || c)
     .replace(/&ntilde;/gi, 'ñ').replace(/&sup2;/g, '²')
     .trim();
+}
+
+function decodeJsonString(v) {
+  try {
+    return JSON.parse(`"${v}"`);
+  } catch {
+    return v;
+  }
 }
