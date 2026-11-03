@@ -93,20 +93,25 @@ $('#tab-list').onclick = () => showView('list');
 $('#tab-sug').onclick = () => showView('sug');
 
 async function loadSuggestions() {
-  const [{ suggestions, lastRun }, c] = await Promise.all([api('/api/suggestions'), api('/api/criteria')]);
+  const [{ suggestions, lastRun, hidden, duplicates }, c] = await Promise.all([api('/api/suggestions'), api('/api/criteria')]);
   criteria = c.criteria;
   $('#sug-count').textContent = suggestions.length ? `(${suggestions.length})` : '';
   $('#sug-empty').hidden = suggestions.length > 0;
   $('#sug-list').replaceChildren(...suggestions.map((sug) => card(sug, true)));
   $('#criteria-text').textContent = criteriaText(criteria);
-  $('#last-run').textContent = lastRun ? lastRunText(lastRun) : 'Todavía no se corrió ninguna búsqueda.';
+  $('#last-run').textContent =
+    (lastRun ? lastRunText(lastRun) : 'Todavía no se corrió ninguna búsqueda.') +
+    (hidden ? ` · ${hidden} oculta${hidden === 1 ? '' : 's'} por pasarse del tope` : '') +
+    (duplicates ? ` · ${duplicates} repetida${duplicates === 1 ? '' : 's'}` : '');
 }
 
 function criteriaText(c) {
   const parts = [
     `${c.ambientes} ambientes en alquiler`,
     `en ${c.barrios.map((b) => b.replace(/(^|\s)\S/g, (x) => x.toUpperCase())).join(', ')}`,
-    c.maxPrice ? `hasta ${c.currency === 'USD' ? 'US$' : '$'} ${c.maxPrice.toLocaleString('es-AR')}` : 'sin tope de precio',
+    c.maxPrice
+      ? `hasta ${c.currency === 'USD' ? 'US$' : '$'} ${c.maxPrice.toLocaleString('es-AR')} por mes con expensas`
+      : 'sin tope de precio',
     c.requirePileta ? 'con pileta' : null,
     c.preferMascotas ? 'mascotas primero' : null,
   ].filter(Boolean);

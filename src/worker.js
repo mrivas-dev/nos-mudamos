@@ -1,5 +1,6 @@
 import { previewListing, sourceFromUrl } from './preview.js';
-import { getCriteria, saveCriteria, runSearch } from './suggestions.js';
+import { uniqueSuggestions } from './dedupe.js';
+import { getCriteria, saveCriteria, runSearch, usdRate, overBudget } from './suggestions.js';
 
 // API de "Nos mudamos": acceso por dispositivo + lista de departamentos.
 
@@ -74,8 +75,21 @@ async function handleApi(request, env, url) {
     const { results } = await env.DB
       .prepare("SELECT * FROM suggestions WHERE status = 'nueva' ORDER BY mascotas = 1 DESC, found_at DESC")
       .all();
+    // El tope se aplica al mostrar, así un cambio de criterios se ve enseguida
+    const [criteria, rate] = await Promise.all([getCriteria(env), usdRate(env)]);
+    const { results: ours } = await env.DB
+      .prepare('SELECT url, address, price, currency, m2_cubiertos, m2_totales, ambientes FROM apartments')
+      .all();
+    const unique = uniqueSuggestions(results, ours);
+    const visible = unique.filter((s) => !overBudget(s, criteria, rate));
     const last = await env.DB.prepare("SELECT value FROM settings WHERE key = 'last_run'").first();
-    return json({ suggestions: results, lastRun: last ? JSON.parse(last.value) : null });
+    return json({
+      suggestions: visible,
+      hidden: unique.length - visible.length,
+      duplicates: results.length - unique.length,
+      usdRate: rate,
+      lastRun: last ? JSON.parse(last.value) : null,
+    });
   }
   if (path === '/api/suggestions/run' && method === 'POST') {
     return json({ summary: await runSearch(env) });
