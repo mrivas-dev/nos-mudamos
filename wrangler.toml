@@ -1,0 +1,18 @@
+name = "nos-mudamos-v2"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nos-mudamos-v2"
+# Completar con el id que devuelve: wrangler d1 create nos-mudamos-v2
+database_id = "REEMPLAZAR"
+
+[vars]
+SHEET_ID = "1Zy9oYnSZFSgsDN6WblYrpHtlNnd3bezhZKbi42qcGgU"
+SHEET_TAB = "Sheet1"
