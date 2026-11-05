@@ -2,7 +2,7 @@
 
 Web simple, pública y pensada para el celular, para llevar la lista de departamentos que estamos viendo.
 
-> La versión 1 quedó guardada en la rama `v1-archivo` y en el tag `v1`. La web de la v1 sigue online hasta que la v2 se publique en su lugar.
+> La versión 1 quedó guardada en la rama `v1-archivo`. La web de la v1 sigue online hasta que la v2 se publique en su lugar.
 
 ## Estado
 
