@@ -1,0 +1,5 @@
+# Copiar a .dev.vars (no se sube). En producción: wrangler secret put <NOMBRE>
+GOOGLE_CLIENT_EMAIL=nombre@proyecto.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+# Opcional: si está, la web pide este código para ver y editar
+ACCESS_CODE=

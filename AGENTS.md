@@ -18,4 +18,8 @@ Estas reglas valen para cualquier asistente que trabaje en este repo (Claude Cod
 
 ## Stack
 
-Todavía no definido. Cuando se elija, anotar acá: lenguaje, framework, hosting, base de datos y comandos para correr, testear y publicar.
+- Cloudflare Worker (JavaScript, sin framework) + D1 + front HTML/CSS/JS plano en `public/`. Diseño base: https://claude.ai/artifact/Jd7aH5roqVdpUQWvEXeCsU
+- La Google Spreadsheet "Dptos" es la fuente de verdad de lo nuestro (URL, Contactado, Respondio, Visita, Notas). Se lee y escribe con la API de Google usando una cuenta de servicio (`src/sheets.js`).
+- D1 (`schema.sql`) guarda lo que se saca de cada aviso: título, barrio, precio, expensas y foto (`src/scrape.js`). Zonaprop bloquea pedidos automáticos: ahí se carga a mano.
+- Secretos (con `wrangler secret put`, o en `.dev.vars` local; plantilla en `.dev.vars.example`): `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`, opcional `ACCESS_CODE`.
+- Correr local: `npm install` y `npm run dev`. Tests: `npm test`. Publicar: `npm run deploy` (todavía no hay deploy automático).
