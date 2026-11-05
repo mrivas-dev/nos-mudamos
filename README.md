@@ -1,30 +1,13 @@
-# Nos mudamos
+# Nos mudamos v2
 
-Web simple y mobile-first para llevar la lista de departamentos que estamos viendo.
+Web simple, pública y pensada para el celular, para llevar la lista de departamentos que estamos viendo.
 
-- **Acceso por dispositivo:** la primera vez cada celular o notebook ingresa un código compartido y queda recordado (cookie de ~13 meses). Desde ⚙️ se ven los dispositivos autorizados y se puede quitar uno.
-- **Lista:** agregar, editar, puntuar y cambiar el estado de cada departamento (nuevo, contactado, visita, favorito, descartado). Al pegar un link de Zonaprop, Argenprop o MercadoLibre se intenta completar los datos solo.
-- **Sugeridos:** dos veces por día se buscan departamentos en Zonaprop, Argenprop y MercadoLibre según los criterios guardados (editables desde la web). Se pueden agregar a la lista o descartar con un toque.
+> La versión 1 quedó guardada en la rama `v1-archivo`. La web de la v1 sigue online hasta que la v2 se publique en su lugar.
 
-## Stack
+## Estado
 
-Cloudflare Workers (API + archivos estáticos) y D1 (SQLite). Sin frameworks: HTML, CSS y JS plano en `public/`.
+Repo recién reiniciado. Todavía no hay código ni deploy automático.
 
-## Desarrollo local
+## Cómo trabajamos
 
-```sh
-npm install
-cp .dev.vars.example .dev.vars   # y poner un ACCESS_CODE
-npm run db:migrate:local
-npm run dev                      # http://localhost:8787
-```
-
-## Publicar
-
-Se publica solo con GitHub Actions en cada push a `main` (`.github/workflows/deploy.yml`). Necesita estos secrets en el repo (Settings → Secrets and variables → Actions):
-
-- `CLOUDFLARE_API_TOKEN`: token de Cloudflare con la plantilla "Edit Cloudflare Workers" más permiso de edición de D1.
-- `CLOUDFLARE_ACCOUNT_ID`: el id de la cuenta de Cloudflare.
-- `ACCESS_CODE`: el código para autorizar dispositivos.
-
-La primera vez el workflow crea la base D1. La web queda en `https://nos-mudamos.<subdominio>.workers.dev`.
+El código se escribe con Cursor y con Claude Code. Las reglas para ambos están en [`AGENTS.md`](AGENTS.md) (Claude las lee desde `CLAUDE.md` y Cursor desde `.cursor/rules/`).

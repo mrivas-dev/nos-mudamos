@@ -1,3 +1,26 @@
+# Dependencias
 node_modules/
+
+# Builds y caches
+dist/
+build/
+.next/
 .wrangler/
+.cache/
+coverage/
+
+# Secretos y entorno local
+.env
+.env.*
+!.env.example
 .dev.vars
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+
+# Configuración local de Claude Code (la compartida sí se sube)
+.claude/settings.local.json

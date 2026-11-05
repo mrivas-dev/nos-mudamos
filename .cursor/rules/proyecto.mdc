@@ -1,0 +1,8 @@
+---
+description: Reglas generales del proyecto Nos mudamos v2
+alwaysApply: true
+---
+
+Seguí las reglas de `AGENTS.md` en la raíz del repo. Es la fuente única de reglas para Cursor y para Claude.
+
+@AGENTS.md
